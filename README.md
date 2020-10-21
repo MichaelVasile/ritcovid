@@ -15,7 +15,7 @@ This was thrown together in my free time, so it is kind of janky right now. For 
 - Make it more efficient in scraping data
 - Have actual data persistence using sqlite3
 - Use Matplotlib to create graphs
-- Be able to be dynamically bound to specific channels without having to hard code channel numbers.
+- Be able to be dynamically bound to specific channels without having to hard code channel numbers
 
 ## Interested in contributing or adding this to your server?
 
