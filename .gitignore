@@ -3,3 +3,4 @@ testalert.py
 .env
 venv
 .idea
+__pycache__
