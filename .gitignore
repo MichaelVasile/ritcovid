@@ -1,3 +1,5 @@
 alerts.log
 testalert.py
 .env
+venv
+.idea
