@@ -4,7 +4,7 @@ import os
 from bs4 import BeautifulSoup
 import discord
 from discord.ext import commands, tasks
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 
 # Bot version number
@@ -98,7 +98,7 @@ def get_statistics():
             0].text.strip().replace("*", " "))
 
     return all_students, all_staff, new_students, new_staff, campus_quarantine, offcampus_quarantine, campus_isolated, \
-           offcampus_isolated, isolation_beds, last_updated, new_case_stat, tests_administered
+        offcampus_isolated, isolation_beds, last_updated, new_case_stat, tests_administered
 
 
 @client.command(pass_context=True)
@@ -143,16 +143,7 @@ async def alertlevel(ctx):
 
 
 def getUptime():
-    uptime = time.time() - startTime
-    day = uptime // (24 * 3600)
-    uptime = uptime % (24 * 3600)
-    hour = uptime // 3600
-    uptime %= 3600
-    minutes = uptime // 60
-    uptime %= 60
-    seconds = uptime
-
-    return "%dd %dh %dm %ds" % (day, hour, minutes, seconds)
+    return str(timedelta(seconds=(time.time() - startTime)))
 
 
 @client.command(pass_context=True)
@@ -235,6 +226,7 @@ async def on_ready():
     print("Bot is ready.")
 
     alert_message.start()
+
 
 # Launch client
 client.run(TOKEN)
