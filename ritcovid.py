@@ -8,7 +8,7 @@ from datetime import datetime
 import time
 
 # Bot version number
-VERSION = "1.3.5"
+VERSION = "1.3.6"
 
 # Load .env
 load_dotenv()
