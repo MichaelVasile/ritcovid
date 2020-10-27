@@ -27,10 +27,6 @@ KEYS = [int(os.getenv(key)) for key in ENV_VARS]
 # Declare channels list for referencing
 CHANNELS = []
 
-# Last known alert level (very janky for now)
-last_known_level = "Yellow (Low to Moderate Risk)"
-# last_known_level = "test"
-
 # to get uptime
 startTime = time.time()
 
@@ -98,7 +94,39 @@ def get_statistics():
             0].text.strip().replace("*", " "))
 
     return all_students, all_staff, new_students, new_staff, campus_quarantine, offcampus_quarantine, campus_isolated, \
-        offcampus_isolated, isolation_beds, last_updated, new_case_stat, tests_administered
+           offcampus_isolated, isolation_beds, last_updated, new_case_stat, tests_administered
+
+
+def check_last_known():
+    # Check to see if the file does not exist or is empty.
+    if os.path.exists("last_known.txt") == False or os.path.getsize("last_known.txt") == 0:
+
+        print("last_known.txt does not exist or is empty. Will create it now...")
+
+        with open("last_known.txt", "w+") as f:
+            # Populate the file
+            f.write(get_alert_level()[0])
+
+    else:
+        print("last_known.txt has valid data.")
+
+
+def get_last_known():
+    last_known = str()
+    # Open the file for reading
+    with open("last_known.txt", "r") as f:
+        # Read first line into the file
+        last_known = f.readline()
+
+    # Return the last known alert level as a string
+    return last_known
+
+
+def update_last_known():
+    # Open text file containing the last known alert level for editing
+    with open("last_known.txt", "w+") as f:
+        # Write the new alert level to the file
+        f.write(get_alert_level()[0])
 
 
 @client.command(pass_context=True)
@@ -119,9 +147,13 @@ async def stats(ctx):
     embed.add_field(name=statistics[10], value=(statistics[2] + " student(s), " + statistics[3] + " employee(s)"),
                     inline=False)
     embed.add_field(name="Tests Administered On Campus", value=(statistics[11]), inline=False)
-    embed.add_field(name="Students Quarantined", value=(statistics[4] + " on campus, " + statistics[5] + " off campus"),
+    embed.add_field(name="Students Quarantined", value=(
+            statistics[4] + " on campus, " + statistics[5] + " off campus (" + str(
+        int(statistics[4]) + int(statistics[5])) + " total)"),
                     inline=False)
-    embed.add_field(name="Students Isolated", value=(statistics[6] + " on campus, " + statistics[7] + " off campus"),
+    embed.add_field(name="Students Isolated", value=(
+            statistics[6] + " on campus, " + statistics[7] + " off campus (" + str(
+        int(statistics[6]) + int(statistics[7])) + " total)"),
                     inline=False)
     embed.add_field(name="Campus Quarantine/Isolation Bed Capacity", value=(statistics[8] + " available"), inline=False)
 
@@ -142,15 +174,21 @@ async def alertlevel(ctx):
     await ctx.send(embed=embed)
 
 
-def getUptime():
-    return str(timedelta(seconds=(time.time() - startTime)))
+def get_uptime():
+    uptime = timedelta(seconds=(time.time() - startTime))
+    days = uptime.days
+    hours = uptime.seconds // 3600
+    minutes = (uptime.seconds // 60) % 60
+    seconds = uptime.seconds
+
+    return "%dd %dh %dm %ds" % (days, hours, minutes, seconds)
 
 
 @client.command(pass_context=True)
 async def botinfo(ctx):
     embed = discord.Embed(
         title="RIT COVID-19 Tracking Bot",
-        description=f"Created by Michael Vasile - Version {VERSION}\nUptime: {getUptime()}\nActive Alert Channels: {len(CHANNELS)}",
+        description=f"Created by Michael Vasile - Version {VERSION}\nUptime: {get_uptime()}\nActive Alert Channels: {len(CHANNELS)}",
     )
 
     await ctx.send(embed=embed)
@@ -174,12 +212,11 @@ async def help(ctx):
 
 @tasks.loop(seconds=120)
 async def alert_message():
-    # Log file
-    log = open("alerts.log", "a+")
-
+    # Get the latest alert level
     alert = get_alert_level()
 
-    global last_known_level
+    # Get the last known alert level
+    last_known_level = get_last_known()
 
     if last_known_level != alert[0]:
         embed = discord.Embed(
@@ -194,10 +231,9 @@ async def alert_message():
         print(f"[{datetime.now()}] ALERT LEVEL CHANGED! Current Level: {alert[0]} (was: {last_known_level})")
 
         # Log to file
-        log.write(f"[{datetime.now()}] ALERT LEVEL CHANGED! Current Level: {alert[0]} (was: {last_known_level})")
+        with open("alerts.log", "a+") as f:
+            f.write(f"[{datetime.now()}] ALERT LEVEL CHANGED! Current Level: {alert[0]} (was: {last_known_level})")
 
-        # Close log
-        log.close()
 
         if last_known_level == "test":
             await CHANNELS[0].send(embed=embed)
@@ -205,19 +241,25 @@ async def alert_message():
             for channel in CHANNELS:
                 await channel.send(embed=embed)
 
-        last_known_level = alert[0]
+        update_last_known()
     else:
         print(f"[{datetime.now()}] No updates at this time.")
 
 
 @client.event
 async def on_ready():
+    print("Starting bot...")
+
     # Load channels into the bot from the KEYS list
     for key in KEYS:
         CHANNELS.append(client.get_channel(key))
 
     # Send load message for verbosity
     print(f"Loaded {len(CHANNELS)} channels.")
+
+    # Verify that the last known text file is present and not empty
+    # Create one if it doesn't exist
+    check_last_known()
 
     # Set status
     await client.change_presence(status=discord.Status.online, activity=discord.Game("COVID Stats | .stats"))
