@@ -1,6 +1,6 @@
 # RIT COVID-19 Tracker Discord Bot
 
-RITCOVID is a Python-based Discord bot that uses the BeautifulSoup 4 API to scrape data from RIT's COVID-19 Dashboard.
+The RIT COVID-19 Tracker is a Python-based Discord bot that uses the [BeautifulSoup library](https://www.crummy.com/software/BeautifulSoup/bs4/doc/) to scrape data from [RIT's COVID-19 Dashboard](https://rit.edu/ready/dashboard).
 
 ## What can it do?
 
@@ -9,7 +9,7 @@ In it's current iteration, the bot can:
 - Send alerts to specified Discord channels when the alert level changes
 - Get current statistics from the RIT COVID-19 Dashboard
 
-## Things I'm working on
+## Things we're working on
 
 This was thrown together in my free time, so it is kind of janky right now. For a version 2.0, I'm looking to:
 - Make it more efficient in scraping data
