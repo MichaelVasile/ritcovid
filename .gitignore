@@ -4,3 +4,4 @@ testalert.py
 venv
 .idea
 __pycache__
+last_known.txt
