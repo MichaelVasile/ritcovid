@@ -96,47 +96,37 @@ def get_statistics():
     return all_students, all_staff, new_students, new_staff, campus_quarantine, offcampus_quarantine, campus_isolated, \
            offcampus_isolated, isolation_beds, last_updated, new_case_stat, tests_administered
 
-def check_last_known():
-    # to anyone looking at this, this is probably not the best way to do this
-    # but it's temporary so shhh.
 
+def check_last_known():
+    # Check to see if the file does not exist or is empty.
     if os.path.exists("last_known.txt") == False or os.path.getsize("last_known.txt") == 0:
 
         print("last_known.txt does not exist or is empty. Will create it now...")
-        f = open("last_known.txt", "w+")
 
-        # If the file is blank, populate it
-        f.write(str(get_alert_level()[0]))
-        # Read in the data
-        last_known = f.readline()
-        # Close the file
-        f.close()
+        with open("last_known.txt", "w+") as f:
+            # Populate the file
+            f.write(get_alert_level()[0])
 
     else:
         print("last_known.txt has valid data.")
 
 
 def get_last_known():
-    # Open text file containing the last known alert level
-    f = open("last_known.txt", "r")
-
-    # Read first line into the file
-    last_known = f.readline()
-
-    # Close file
-    f.close()
+    last_known = str()
+    # Open the file for reading
+    with open("last_known.txt", "r") as f:
+        # Read first line into the file
+        last_known = f.readline()
 
     # Return the last known alert level as a string
     return last_known
 
 
-def set_last_known(new_level):
+def update_last_known():
     # Open text file containing the last known alert level for editing
-    f = open("last_known.txt", "w+")
-    # Write to the file
-    f.write(new_level)
-    # Close the file
-    f.close()
+    with open("last_known.txt", "w+") as f:
+        # Write the new alert level to the file
+        f.write(get_alert_level()[0])
 
 
 @client.command(pass_context=True)
@@ -158,12 +148,12 @@ async def stats(ctx):
                     inline=False)
     embed.add_field(name="Tests Administered On Campus", value=(statistics[11]), inline=False)
     embed.add_field(name="Students Quarantined", value=(
-                statistics[4] + " on campus, " + statistics[5] + " off campus (" + str(
-                    int(statistics[4]) + int(statistics[5])) + " total)"),
+            statistics[4] + " on campus, " + statistics[5] + " off campus (" + str(
+        int(statistics[4]) + int(statistics[5])) + " total)"),
                     inline=False)
     embed.add_field(name="Students Isolated", value=(
-                statistics[6] + " on campus, " + statistics[7] + " off campus (" + str(
-                    int(statistics[6]) + int(statistics[7])) + " total)"),
+            statistics[6] + " on campus, " + statistics[7] + " off campus (" + str(
+        int(statistics[6]) + int(statistics[7])) + " total)"),
                     inline=False)
     embed.add_field(name="Campus Quarantine/Isolation Bed Capacity", value=(statistics[8] + " available"), inline=False)
 
@@ -187,8 +177,8 @@ async def alertlevel(ctx):
 def get_uptime():
     uptime = timedelta(seconds=(time.time() - startTime))
     days = uptime.days
-    hours = uptime.seconds//3600
-    minutes = (uptime.seconds//60)%60
+    hours = uptime.seconds // 3600
+    minutes = (uptime.seconds // 60) % 60
     seconds = uptime.seconds
 
     return "%dd %dh %dm %ds" % (days, hours, minutes, seconds)
@@ -222,11 +212,10 @@ async def help(ctx):
 
 @tasks.loop(seconds=120)
 async def alert_message():
-    # Log file
-    log = open("alerts.log", "a+")
-
+    # Get the latest alert level
     alert = get_alert_level()
 
+    # Get the last known alert level
     last_known_level = get_last_known()
 
     if last_known_level != alert[0]:
@@ -242,10 +231,9 @@ async def alert_message():
         print(f"[{datetime.now()}] ALERT LEVEL CHANGED! Current Level: {alert[0]} (was: {last_known_level})")
 
         # Log to file
-        log.write(f"[{datetime.now()}] ALERT LEVEL CHANGED! Current Level: {alert[0]} (was: {last_known_level})")
+        with open("alerts.log", "a+") as f:
+            f.write(f"[{datetime.now()}] ALERT LEVEL CHANGED! Current Level: {alert[0]} (was: {last_known_level})")
 
-        # Close log
-        log.close()
 
         if last_known_level == "test":
             await CHANNELS[0].send(embed=embed)
@@ -253,7 +241,7 @@ async def alert_message():
             for channel in CHANNELS:
                 await channel.send(embed=embed)
 
-        set_last_known(alert[0])
+        update_last_known()
     else:
         print(f"[{datetime.now()}] No updates at this time.")
 
