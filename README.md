@@ -24,4 +24,5 @@ Reach out to me via Discord (Vaseline#1107) or through email [michaelvasile17@gm
 ## Project members
 - [Michael Vasile](https://github.com/michaelvasile) (Project Lead)
 - [Shantanav Saurav](https://github.com/shantanav)
+- [~~aon mikl thomp~~](https://github.com/orthos)
 - [Aaron Thompson](https://github.com/amikht)
