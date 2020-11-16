@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import time
 
 # Bot version number
-VERSION = "1.3.6"
+VERSION = "1.3.7"
 
 # Load .env
 load_dotenv()
@@ -173,13 +173,13 @@ async def alertlevel(ctx):
 
     await ctx.send(embed=embed)
 
-
+# Get the bot's current uptime from load
 def get_uptime():
     uptime = timedelta(seconds=(time.time() - startTime))
     days = uptime.days
     hours = uptime.seconds // 3600
     minutes = (uptime.seconds // 60) % 60
-    seconds = uptime.seconds
+    seconds = uptime.seconds % 60
 
     return "%dd %dh %dm %ds" % (days, hours, minutes, seconds)
 
@@ -193,7 +193,7 @@ async def botinfo(ctx):
 
     await ctx.send(embed=embed)
 
-
+# The help command
 @client.command(pass_context=True)
 async def help(ctx):
     embed = discord.Embed(
@@ -209,7 +209,7 @@ async def help(ctx):
 
     await ctx.send(embed=embed)
 
-
+# Checks to see if the alert level changed, will send an alert if it has
 @tasks.loop(seconds=120)
 async def alert_message():
     # Get the latest alert level
@@ -217,6 +217,11 @@ async def alert_message():
 
     # Get the last known alert level
     last_known_level = get_last_known()
+
+    # Result boolean for logger
+    result = bool(False)
+
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     if last_known_level != alert[0]:
         embed = discord.Embed(
@@ -228,23 +233,42 @@ async def alert_message():
         embed.add_field(name="Previous Alert Level", value=last_known_level, inline=False)
 
         # Log to console
-        print(f"[{datetime.now()}] ALERT LEVEL CHANGED! Current Level: {alert[0]} (was: {last_known_level})")
+        print(f"[{timestamp}] ALERT LEVEL CHANGED! Current Level: {alert[0]}. Previous: {last_known_level}.")
 
         # Log to file
         with open("alerts.log", "a+") as f:
-            f.write(f"[{datetime.now()}] ALERT LEVEL CHANGED! Current Level: {alert[0]} (was: {last_known_level})")
+            f.write(f"[{timestamp}] ALERT LEVEL CHANGED! Current Level: {alert[0]}. Previous: {last_known_level}.")
 
+        # Send an alert to all registered Discord channels
+        for channel in CHANNELS:
+            await channel.send(embed=embed)
 
-        if last_known_level == "test":
-            await CHANNELS[0].send(embed=embed)
-        else:
-            for channel in CHANNELS:
-                await channel.send(embed=embed)
-
+        # Update the last known text file
         update_last_known()
     else:
-        print(f"[{datetime.now()}] No updates at this time.")
+        print(f"[{timestamp}] No updates at this time.")
 
+    with open("logger.log", "a+") as f:
+        if result == True:
+            f.write(f"[{timestamp}] Checked for updates. Alert level was updated.")
+        else:
+            f.write(f"[{timestamp}] Checked for updates. Alert level was not updated.")
+
+@tasks.loop(seconds=300)
+async def logger_check():
+    # Get the last modified time of the file
+    mod_time = os.path.getmtime("logger.log")
+    file_age = time.time() - os.path.getmtime("logger.log")
+
+    if file_age > 120:
+        embed = discord.Embed(
+            title="Logger error",
+            description=f"No logger output since {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(mod_time))}",
+            colour=0xffee70,
+        )
+
+        # Send to the test server's logger channel
+        await CHANNELS[0].send(embed=embed)
 
 @client.event
 async def on_ready():
@@ -267,7 +291,11 @@ async def on_ready():
     # Send ready message
     print("Bot is ready.")
 
+    with open("logger.log", "a+") as f:
+            f.write(f"** Bot initialized at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} **")
+
     alert_message.start()
+    logger_check.start()
 
 
 # Launch client
