@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import time
 
 # Bot version number
-VERSION = "1.3.7"
+VERSION = "1.3.8"
 
 # Load .env
 load_dotenv()
@@ -35,7 +35,7 @@ print(f"RIT COVID-19 Tracking Bot v{VERSION} by Michael Vasile\n")
 
 
 def get_alert_level():
-    url = 'https://www.rit.edu/ready/dashboard'
+    url = 'https://www.rit.edu/ready/spring-dashboard'
     page = requests.get(url, headers={'Cache-Control': 'no-cache'})
 
     soup = BeautifulSoup(page.content, 'html.parser')
@@ -63,38 +63,40 @@ def get_statistics():
 
     soup = BeautifulSoup(page.content, 'html.parser')
     all_students = str(
-        soup.find('div', attrs={'class': 'statistic-12481'}).find_all("p", attrs={'class': 'card-header'})[
+        soup.find('div', attrs={'class': 'statistic-13872'}).find_all("p", attrs={'class': 'card-header'})[
             0].text.strip())
-    all_staff = str(soup.find('div', attrs={'class': 'statistic-12484'}).find_all("p", attrs={'class': 'card-header'})[
+    all_staff = str(soup.find('div', attrs={'class': 'statistic-13875'}).find_all("p", attrs={'class': 'card-header'})[
                         0].text.strip())
-    new_students = str(
-        soup.find('div', attrs={'class': 'statistic-12202'}).find_all("p", attrs={'class': 'card-header'})[
-            0].text.strip())
-    new_staff = str(soup.find('div', attrs={'class': 'statistic-12205'}).find_all("p", attrs={'class': 'card-header'})[
-                        0].text.strip())
+    # new_students = str(
+    #     soup.find('div', attrs={'class': 'statistic-12202'}).find_all("p", attrs={'class': 'card-header'})[
+    #         0].text.strip())
+    # new_staff = str(soup.find('div', attrs={'class': 'statistic-12205'}).find_all("p", attrs={'class': 'card-header'})[
+    #                     0].text.strip())
     campus_quarantine = str(
-        soup.find('div', attrs={'class': 'statistic-12190'}).find_all("p", attrs={'class': 'card-header'})[
+        soup.find('div', attrs={'class': 'statistic-13893'}).find_all("p", attrs={'class': 'card-header'})[
             0].text.strip())
     offcampus_quarantine = str(
-        soup.find('div', attrs={'class': 'statistic-12193'}).find_all("p", attrs={'class': 'card-header'})[
+        soup.find('div', attrs={'class': 'statistic-13896'}).find_all("p", attrs={'class': 'card-header'})[
             0].text.strip())
     campus_isolated = str(
-        soup.find('div', attrs={'class': 'statistic-12226'}).find_all("p", attrs={'class': 'card-header'})[
+        soup.find('div', attrs={'class': 'statistic-13905'}).find_all("p", attrs={'class': 'card-header'})[
             0].text.strip())
     offcampus_isolated = str(
-        soup.find('div', attrs={'class': 'statistic-12229'}).find_all("p", attrs={'class': 'card-header'})[
+        soup.find('div', attrs={'class': 'statistic-13908'}).find_all("p", attrs={'class': 'card-header'})[
             0].text.strip())
     isolation_beds = str(
-        soup.find('div', attrs={'class': 'statistic-12214'}).find_all("p", attrs={'class': 'card-header'})[
+        soup.find('div', attrs={'class': 'statistic-13935'}).find_all("p", attrs={'class': 'card-header'})[
             0].text.strip())
     last_updated = str(soup.find('strong').text)
-    new_case_stat = str(soup.find('p', attrs={'class': 'h2'}).text)
     tests_administered = str(
-        soup.find('div', attrs={'class': 'statistic-12829'}).find_all("p", attrs={'class': 'card-header'})[
+        soup.find('div', attrs={'class': 'statistic-13923'}).find_all("p", attrs={'class': 'card-header'})[
             0].text.strip().replace("*", " "))
 
-    return all_students, all_staff, new_students, new_staff, campus_quarantine, offcampus_quarantine, campus_isolated, \
-           offcampus_isolated, isolation_beds, last_updated, new_case_stat, tests_administered
+    return all_students, all_staff, campus_quarantine, offcampus_quarantine, campus_isolated, \
+           offcampus_isolated, isolation_beds, last_updated, tests_administered
+
+    # return all_students, all_staff, new_students, new_staff, campus_quarantine, offcampus_quarantine, campus_isolated, \
+    #        offcampus_isolated, isolation_beds, last_updated, new_case_stat, tests_administered
 
 
 def check_last_known():
@@ -136,26 +138,26 @@ async def stats(ctx):
 
     embed = discord.Embed(
         title="Latest Statistics from RIT COVID-19 Dashboard",
-        description=("Last updated: " + statistics[9]),
+        description=("Last updated: " + statistics[7]),
         colour=alert_level[1],
         timestamp=datetime.now()
     )
 
     embed.add_field(name="RIT COVID-19 Alert Level", value=alert_level[0], inline=False)
-    embed.add_field(name="All Confirmed Cases",
+    embed.add_field(name="All Confirmed Cases Since Since January 25",
                     value=(statistics[0] + " student(s), " + statistics[1] + " employee(s)"), inline=False)
-    embed.add_field(name=statistics[10], value=(statistics[2] + " student(s), " + statistics[3] + " employee(s)"),
-                    inline=False)
-    embed.add_field(name="Tests Administered On Campus", value=(statistics[11]), inline=False)
+    # embed.add_field(name="Total Positive Cases Since January 25", value=(statistics[2] + " student(s), " + statistics[3] + " employee(s)"),
+    #                 inline=False)
     embed.add_field(name="Students Quarantined", value=(
+            statistics[2] + " on campus, " + statistics[3] + " off campus (" + str(
+        int(statistics[2]) + int(statistics[3])) + " total)"),
+                    inline=False)
+    embed.add_field(name="Students Isolated", value=(
             statistics[4] + " on campus, " + statistics[5] + " off campus (" + str(
         int(statistics[4]) + int(statistics[5])) + " total)"),
                     inline=False)
-    embed.add_field(name="Students Isolated", value=(
-            statistics[6] + " on campus, " + statistics[7] + " off campus (" + str(
-        int(statistics[6]) + int(statistics[7])) + " total)"),
-                    inline=False)
-    embed.add_field(name="Campus Quarantine/Isolation Bed Capacity", value=(statistics[8] + " available"), inline=False)
+    embed.add_field(name="Tests Administered On Campus Since January 25", value=(statistics[8] + " (to date)"), inline=False)
+    embed.add_field(name="Campus Quarantine/Isolation Bed Capacity", value=(statistics[6] + " available"), inline=False)
 
     await ctx.send(embed=embed)
 
@@ -233,11 +235,11 @@ async def alert_message():
         embed.add_field(name="Previous Alert Level", value=last_known_level, inline=False)
 
         # Log to console
-        print(f"[{timestamp}] ALERT LEVEL CHANGED! Current Level: {alert[0]}. Previous: {last_known_level}.")
+        print(f"[{timestamp}] ALERT LEVEL CHANGED! Current Level: {alert[0]}. Previous: {last_known_level}.\n")
 
         # Log to file
         with open("alerts.log", "a+") as f:
-            f.write(f"[{timestamp}] ALERT LEVEL CHANGED! Current Level: {alert[0]}. Previous: {last_known_level}.")
+            f.write(f"[{timestamp}] ALERT LEVEL CHANGED! Current Level: {alert[0]}. Previous: {last_known_level}.\n")
 
         # Send an alert to all registered Discord channels
         for channel in CHANNELS:
@@ -250,9 +252,9 @@ async def alert_message():
 
     with open("logger.log", "a+") as f:
         if result == True:
-            f.write(f"[{timestamp}] Checked for updates. Alert level was updated.")
+            f.write(f"[{timestamp}] Checked for updates. Alert level was updated.\n")
         else:
-            f.write(f"[{timestamp}] Checked for updates. Alert level was not updated.")
+            f.write(f"[{timestamp}] Checked for updates. Alert level was not updated.\n")
 
 @tasks.loop(seconds=300)
 async def logger_check():
@@ -286,13 +288,13 @@ async def on_ready():
     check_last_known()
 
     # Set status
-    await client.change_presence(status=discord.Status.online, activity=discord.Game("COVID Stats | .stats"))
+    await client.change_presence(status=discord.Status.online, activity=discord.Game("RIT COVID Stats | .stats"))
 
     # Send ready message
     print("Bot is ready.")
 
     with open("logger.log", "a+") as f:
-            f.write(f"** Bot initialized at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} **")
+            f.write(f"** Bot initialized at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} **\n")
 
     alert_message.start()
     logger_check.start()
