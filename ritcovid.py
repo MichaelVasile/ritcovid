@@ -1,14 +1,13 @@
 from dotenv import load_dotenv
-import requests
 import os
-from bs4 import BeautifulSoup
+import urllib.request, json
 import discord
 from discord.ext import commands, tasks
 from datetime import datetime, timedelta
 import time
 
 # Bot version number
-VERSION = "1.3.8"
+VERSION = "2.0 BETA"
 
 # Load .env
 load_dotenv()
@@ -34,69 +33,60 @@ startTime = time.time()
 print(f"RIT COVID-19 Tracking Bot v{VERSION} by Michael Vasile\n")
 
 
+def get_data_from_api():
+    url = "https://ritcoviddashboard.com/api/v0/latest"
+    user_agent = 'covidbot-test'
+    headers={'User-Agent':user_agent,} 
+
+    request = urllib.request.Request(url,None,headers)
+    response = urllib.request.urlopen(request)
+    data = json.loads(response.read())
+
+    return data
+
 def get_alert_level():
-    url = 'https://www.rit.edu/ready/spring-dashboard'
-    page = requests.get(url, headers={'Cache-Control': 'no-cache'})
+    data = get_data_from_api()
 
-    soup = BeautifulSoup(page.content, 'html.parser')
-    container = soup.find('div', attrs={'id': 'pandemic-message-container'})
-
-    alert_level = container.find("a").text
+    alert_level = data["alert_level"]
 
     color = 0x000000
 
-    if "Green" in alert_level:
+    if "green" in alert_level:
+        alert_level = "Green (Low Risk with Vigilance)"
         color = 0x60c10c
-    elif "Yellow" in alert_level:
+    elif "yellow" in alert_level:
+        alert_level = "Yellow (Moderate Risk)"
         color = 0xf6be00
-    elif "Orange" in alert_level:
+    elif "orange" in alert_level:
+        alert_level = "Orange (Moderate to High Risk)"
         color = 0xf76902
     elif "Red" in alert_level:
+        alert_level = "Red (High to Severe Risk)"
         color = 0xda291c
 
     return alert_level, color
 
 
 def get_statistics():
-    url = 'https://www.rit.edu/ready/dashboard'
-    page = requests.get(url, headers={'Cache-Control': 'no-cache'})
 
-    soup = BeautifulSoup(page.content, 'html.parser')
-    all_students = str(
-        soup.find('div', attrs={'class': 'statistic-13872'}).find_all("p", attrs={'class': 'card-header'})[
-            0].text.strip())
-    all_staff = str(soup.find('div', attrs={'class': 'statistic-13875'}).find_all("p", attrs={'class': 'card-header'})[
-                        0].text.strip())
-    # new_students = str(
-    #     soup.find('div', attrs={'class': 'statistic-12202'}).find_all("p", attrs={'class': 'card-header'})[
-    #         0].text.strip())
-    # new_staff = str(soup.find('div', attrs={'class': 'statistic-12205'}).find_all("p", attrs={'class': 'card-header'})[
-    #                     0].text.strip())
-    campus_quarantine = str(
-        soup.find('div', attrs={'class': 'statistic-13893'}).find_all("p", attrs={'class': 'card-header'})[
-            0].text.strip())
-    offcampus_quarantine = str(
-        soup.find('div', attrs={'class': 'statistic-13896'}).find_all("p", attrs={'class': 'card-header'})[
-            0].text.strip())
-    campus_isolated = str(
-        soup.find('div', attrs={'class': 'statistic-13905'}).find_all("p", attrs={'class': 'card-header'})[
-            0].text.strip())
-    offcampus_isolated = str(
-        soup.find('div', attrs={'class': 'statistic-13908'}).find_all("p", attrs={'class': 'card-header'})[
-            0].text.strip())
-    isolation_beds = str(
-        soup.find('div', attrs={'class': 'statistic-13935'}).find_all("p", attrs={'class': 'card-header'})[
-            0].text.strip())
-    last_updated = str(soup.find('strong').text)
-    tests_administered = str(
-        soup.find('div', attrs={'class': 'statistic-13923'}).find_all("p", attrs={'class': 'card-header'})[
-            0].text.strip().replace("*", " "))
+    # Call API for latest statistics
+    data = get_data_from_api()
+    
+    # Statistics from API
+    last_updated = data["last_updated"]
+    total_students = data["total_students"]
+    total_staff = data["total_staff"]
+    new_students = data["new_students"]
+    new_staff = data["new_staff"]
+    campus_quarantine = data["quarantine_on_campus"]
+    offcampus_quarantine = data["quarantine_off_campus"]
+    campus_isolated = data["isolation_on_campus"]
+    offcampus_isolated = data["isolation_off_campus"]
+    tests_administered = data["tests_administered"]
+    beds_available = data["beds_available"]
 
-    return all_students, all_staff, campus_quarantine, offcampus_quarantine, campus_isolated, \
-           offcampus_isolated, isolation_beds, last_updated, tests_administered
-
-    # return all_students, all_staff, new_students, new_staff, campus_quarantine, offcampus_quarantine, campus_isolated, \
-    #        offcampus_isolated, isolation_beds, last_updated, new_case_stat, tests_administered
+    return last_updated, total_students, total_staff, new_students, new_staff, campus_quarantine, offcampus_isolated, \
+            campus_isolated, offcampus_isolated, tests_administered, beds_available
 
 
 def check_last_known():
@@ -137,27 +127,21 @@ async def stats(ctx):
     statistics = get_statistics()
 
     embed = discord.Embed(
-        title="Latest Statistics from RIT COVID-19 Dashboard",
-        description=("Last updated: " + statistics[7]),
+        title="Latest RIT COVID-19 Statistics",
+        description=(f"Current statistics as of: {statistics[0]}\n[Source](https://ritcoviddashboard.com)"),
         colour=alert_level[1],
         timestamp=datetime.now()
     )
 
     embed.add_field(name="RIT COVID-19 Alert Level", value=alert_level[0], inline=False)
-    embed.add_field(name="All Confirmed Cases Since Since January 25",
-                    value=(statistics[0] + " student(s), " + statistics[1] + " employee(s)"), inline=False)
-    # embed.add_field(name="Total Positive Cases Since January 25", value=(statistics[2] + " student(s), " + statistics[3] + " employee(s)"),
-    #                 inline=False)
-    embed.add_field(name="Students Quarantined", value=(
-            statistics[2] + " on campus, " + statistics[3] + " off campus (" + str(
-        int(statistics[2]) + int(statistics[3])) + " total)"),
+    embed.add_field(name="All Confirmed Cases",
+                    value=(f"{statistics[1]} students, {statistics[2]} employees"), inline=False)
+    embed.add_field(name="New Cases from Past 14 Days", value=(f"{statistics[3]} students, {statistics[4]} employees"), inline=False)
+    embed.add_field(name="Students Quarantined", value=(f"{statistics[5]} on campus, {statistics[6]} off campus ({str(int(statistics[5]) + int(statistics[6]))} total)"), inline=False)
+    embed.add_field(name="Students Isolated", value=(f"{statistics[7]} on campus, {statistics[8]} off campus ({str(int(statistics[7]) + int(statistics[8]))} total)"),
                     inline=False)
-    embed.add_field(name="Students Isolated", value=(
-            statistics[4] + " on campus, " + statistics[5] + " off campus (" + str(
-        int(statistics[4]) + int(statistics[5])) + " total)"),
-                    inline=False)
-    embed.add_field(name="Tests Administered On Campus Since January 25", value=(statistics[8] + " (to date)"), inline=False)
-    embed.add_field(name="Campus Quarantine/Isolation Bed Capacity", value=(statistics[6] + " available"), inline=False)
+    embed.add_field(name="Tests Administered (to date)", value=(f"{statistics[9]}"), inline=False)
+    embed.add_field(name="Campus Quarantine/Isolation Bed Capacity", value=(f"{statistics[10]}% available"), inline=False)
 
     await ctx.send(embed=embed)
 
