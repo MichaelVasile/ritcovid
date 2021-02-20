@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import time
 
 # Bot version number
-VERSION = "2.0 BETA"
+VERSION = "2.0 Beta 1"
 
 # Load .env
 load_dotenv()
@@ -141,7 +141,7 @@ async def stats(ctx):
     embed.add_field(name="Students Isolated", value=(f"{statistics[7]} on campus, {statistics[8]} off campus ({str(int(statistics[7]) + int(statistics[8]))} total)"),
                     inline=False)
     embed.add_field(name="Tests Administered (to date)", value=(f"{statistics[9]}"), inline=False)
-    embed.add_field(name="Campus Quarantine/Isolation Bed Capacity", value=(f"{statistics[10]}% available"), inline=False)
+    embed.add_field(name="Beds Available", value=(f"{statistics[10]}%"), inline=False)
 
     await ctx.send(embed=embed)
 
@@ -174,8 +174,11 @@ def get_uptime():
 async def botinfo(ctx):
     embed = discord.Embed(
         title="RIT COVID-19 Tracking Bot",
-        description=f"Created by Michael Vasile - Version {VERSION}\nUptime: {get_uptime()}\nActive Alert Channels: {len(CHANNELS)}",
+        description=f"Created by Mike Vasile - Version {VERSION}\nSpecial Thanks to [Galen Guyer](https://galenguyer.com) & [Shantanav Saurav](https://shantanav.com)",
     )
+
+    embed.add_field(name="Uptime", value=f"{get_uptime()}")
+    embed.add_field(name="Active Alert Channels", value=f"{len(CHANNELS)}")
 
     await ctx.send(embed=embed)
 
