@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import time
 
 # Bot version number
-VERSION = "2.0 Beta 1"
+VERSION = "2.0"
 
 # Load .env
 load_dotenv()
@@ -35,7 +35,7 @@ print(f"RIT COVID-19 Tracking Bot v{VERSION} by Michael Vasile\n")
 
 def get_data_from_api():
     url = "https://ritcoviddashboard.com/api/v0/latest"
-    user_agent = 'covidbot-test'
+    user_agent = 'covidbot'
     headers={'User-Agent':user_agent,} 
 
     request = urllib.request.Request(url,None,headers)
@@ -43,6 +43,19 @@ def get_data_from_api():
     data = json.loads(response.read())
 
     return data
+
+
+def get_historical_data_from_api():
+    url = "https://ritcoviddashboard.com/api/v0/history"
+    user_agent = 'covidbot'
+    headers = {'User-Agent': user_agent, }
+
+    request = urllib.request.Request(url, None, headers)
+    response = urllib.request.urlopen(request)
+    data = json.loads(response.read())
+
+    return data
+
 
 def get_alert_level():
     data = get_data_from_api()
@@ -85,8 +98,19 @@ def get_statistics():
     tests_administered = data["tests_administered"]
     beds_available = data["beds_available"]
 
-    return last_updated, total_students, total_staff, new_students, new_staff, campus_quarantine, offcampus_isolated, \
-            campus_isolated, offcampus_isolated, tests_administered, beds_available
+    # Get historical data from API
+    historical_data = get_historical_data_from_api()
+
+    # Get cases since January 25th
+    for datapoint in historical_data:
+        datapoint_date_time = datetime.strptime(str(datapoint["last_updated"]), '%Y-%m-%d %H:%M:%S')
+        if datapoint_date_time == datetime(2021, 1, 22, 21, 4, 6):
+            student_case_count = data["total_students"] - datapoint["total_students"]
+            staff_case_count = data["total_staff"] - datapoint["total_staff"]
+
+
+    return last_updated, total_students, total_staff, new_students, new_staff, campus_quarantine, offcampus_quarantine, \
+            campus_isolated, offcampus_isolated, tests_administered, beds_available, student_case_count, staff_case_count
 
 
 def check_last_known():
@@ -134,14 +158,15 @@ async def stats(ctx):
     )
 
     embed.add_field(name="RIT COVID-19 Alert Level", value=alert_level[0], inline=False)
+    embed.add_field(name="New Cases from Past 14 Days", value=(f"{statistics[3]} students, {statistics[4]} employees"), inline=False)
+    embed.add_field(name="Total Cases Since January 25", value=(f"{statistics[11]} students, {statistics[12]} employees"), inline=False)
     embed.add_field(name="All Confirmed Cases",
                     value=(f"{statistics[1]} students, {statistics[2]} employees"), inline=False)
-    embed.add_field(name="New Cases from Past 14 Days", value=(f"{statistics[3]} students, {statistics[4]} employees"), inline=False)
     embed.add_field(name="Students Quarantined", value=(f"{statistics[5]} on campus, {statistics[6]} off campus ({str(int(statistics[5]) + int(statistics[6]))} total)"), inline=False)
     embed.add_field(name="Students Isolated", value=(f"{statistics[7]} on campus, {statistics[8]} off campus ({str(int(statistics[7]) + int(statistics[8]))} total)"),
                     inline=False)
-    embed.add_field(name="Tests Administered (to date)", value=(f"{statistics[9]}"), inline=False)
-    embed.add_field(name="Beds Available", value=(f"{statistics[10]}%"), inline=False)
+    embed.add_field(name="Tests Administered (to date)", value=(f"{statistics[9]:,}"), inline=False)
+    embed.add_field(name="Beds Available", value=(f"{statistics[10]}% available"), inline=False)
 
     await ctx.send(embed=embed)
 
