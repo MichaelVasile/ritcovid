@@ -11,7 +11,7 @@ In it's current iteration, the bot can:
 
 ## Things we're working on
 
-This was thrown together in my free time, so it is kind of janky right now. For a version 2.0, I'm looking to:
+This was thrown together in my free time, so it is kind of janky right now. For a version 2.0, we are looking to:
 - Make it more efficient in scraping data
 - Have actual data persistence using sqlite3
 - Use Matplotlib to create graphs
