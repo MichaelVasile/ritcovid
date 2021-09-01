@@ -1,13 +1,14 @@
 from dotenv import load_dotenv
 import os
-import urllib.request, json
+import urllib.request
+import json
 import discord
 from discord.ext import commands, tasks
 from datetime import datetime, timedelta
 import time
 
 # Bot version number
-VERSION = "2.0"
+VERSION = "2.0.1"
 
 # Load .env
 load_dotenv()
@@ -16,7 +17,7 @@ load_dotenv()
 TOKEN = os.getenv("API_TOKEN")
 
 # Set client parameters1
-client = commands.Bot(command_prefix=".")
+client = commands.Bot(command_prefix=".", intents=discord.Intents.all())
 client.remove_command('help')
 
 # Load channel IDs from .env
@@ -58,6 +59,7 @@ def get_historical_data_from_api():
 
 
 def get_alert_level():
+    # *** UPDATE 8/31/2021: RIT has discontinued the COVID-19 Alert Level ***
     data = get_data_from_api()
 
     alert_level = data["alert_level"]
@@ -91,26 +93,28 @@ def get_statistics():
     total_staff = data["total_staff"]
     new_students = data["new_students"]
     new_staff = data["new_staff"]
-    campus_quarantine = data["quarantine_on_campus"]
-    offcampus_quarantine = data["quarantine_off_campus"]
-    campus_isolated = data["isolation_on_campus"]
-    offcampus_isolated = data["isolation_off_campus"]
-    tests_administered = data["tests_administered"]
-    beds_available = data["beds_available"]
+    # campus_quarantine = data["quarantine_on_campus"]
+    # offcampus_quarantine = data["quarantine_off_campus"]
+    # campus_isolated = data["isolation_on_campus"]
+    # offcampus_isolated = data["isolation_off_campus"]
+    # tests_administered = data["tests_administered"]
+    # beds_available = data["beds_available"]
 
     # Get historical data from API
-    historical_data = get_historical_data_from_api()
+    # historical_data = get_historical_data_from_api()
 
     # Get cases since January 25th
-    for datapoint in historical_data:
-        datapoint_date_time = datetime.strptime(str(datapoint["last_updated"]), '%Y-%m-%d %H:%M:%S')
-        if datapoint_date_time == datetime(2021, 1, 22, 21, 4, 6):
-            student_case_count = data["total_students"] - datapoint["total_students"]
-            staff_case_count = data["total_staff"] - datapoint["total_staff"]
+    # for datapoint in historical_data:
+    #     datapoint_date_time = datetime.strptime(str(datapoint["last_updated"]), '%Y-%m-%d %H:%M:%S')
+    #     if datapoint_date_time == datetime(2021, 1, 22, 21, 4, 6):
+    #         student_case_count = data["total_students"] - datapoint["total_students"]
+    #         staff_case_count = data["total_staff"] - datapoint["total_staff"]
 
 
-    return last_updated, total_students, total_staff, new_students, new_staff, campus_quarantine, offcampus_quarantine, \
-            campus_isolated, offcampus_isolated, tests_administered, beds_available, student_case_count, staff_case_count
+    # return last_updated, total_students, total_staff, new_students, new_staff, campus_quarantine, offcampus_quarantine, \
+    #         campus_isolated, offcampus_isolated, tests_administered, beds_available, student_case_count, staff_case_count
+
+    return last_updated, total_students, total_staff, new_students, new_staff
 
 
 def check_last_known():
@@ -147,39 +151,46 @@ def update_last_known():
 
 @client.command(pass_context=True)
 async def stats(ctx):
-    alert_level = get_alert_level()
+    # alert_level = get_alert_level()
     statistics = get_statistics()
 
     embed = discord.Embed(
         title="Latest RIT COVID-19 Statistics",
         description=(f"Current statistics as of: {statistics[0]}\n[Source](https://ritcoviddashboard.com)"),
-        colour=alert_level[1],
+        colour=0x3928d4,
         timestamp=datetime.now()
     )
 
-    embed.add_field(name="RIT COVID-19 Alert Level", value=alert_level[0], inline=False)
+    # embed.add_field(name="RIT COVID-19 Alert Level", value=alert_level[0], inline=False)
     embed.add_field(name="New Cases from Past 14 Days", value=(f"{statistics[3]} students, {statistics[4]} employees"), inline=False)
-    embed.add_field(name="Total Cases Since January 25", value=(f"{statistics[11]} students, {statistics[12]} employees"), inline=False)
+    # embed.add_field(name="Total Cases Since January 25", value=(f"{statistics[11]} students, {statistics[12]} employees"), inline=False)
     embed.add_field(name="All Confirmed Cases",
                     value=(f"{statistics[1]} students, {statistics[2]} employees"), inline=False)
-    embed.add_field(name="Students Quarantined", value=(f"{statistics[5]} on campus, {statistics[6]} off campus ({str(int(statistics[5]) + int(statistics[6]))} total)"), inline=False)
-    embed.add_field(name="Students Isolated", value=(f"{statistics[7]} on campus, {statistics[8]} off campus ({str(int(statistics[7]) + int(statistics[8]))} total)"),
-                    inline=False)
-    embed.add_field(name="Tests Administered (to date)", value=(f"{statistics[9]:,}"), inline=False)
-    embed.add_field(name="Beds Available", value=(f"{statistics[10]}% available"), inline=False)
+    # embed.add_field(name="Students Quarantined", value=(f"{statistics[5]} on campus, {statistics[6]} off campus ({str(int(statistics[5]) + int(statistics[6]))} total)"), inline=False)
+    # embed.add_field(name="Students Isolated", value=(f"{statistics[7]} on campus, {statistics[8]} off campus ({str(int(statistics[7]) + int(statistics[8]))} total)"),
+    #                 inline=False)
+    # embed.add_field(name="Tests Administered (to date)", value=(f"{statistics[9]:,}"), inline=False)
+    # embed.add_field(name="Beds Available", value=(f"{statistics[10]}% available"), inline=False)
 
     await ctx.send(embed=embed)
 
 
 @client.command(pass_context=True)
 async def alertlevel(ctx):
-    alert_level = get_alert_level()
+    # alert_level = get_alert_level()
+
+    # embed = discord.Embed(
+    #     title="Current RIT COVID-19 Alert Level",
+    #     description=alert_level[0],
+    #     colour=alert_level[1],
+    #     timestamp=datetime.now()
+    # )
 
     embed = discord.Embed(
-        title="Current RIT COVID-19 Alert Level",
-        description=alert_level[0],
-        colour=alert_level[1],
-        timestamp=datetime.now()
+        title="RIT COVID-19 Alert Level",
+        description='RIT has discontinued the COVID-19 Alert Level.',
+        colour=0xd42828,
+        # timestamp=datetime.now()
     )
 
     await ctx.send(embed=embed)
@@ -215,7 +226,7 @@ async def help(ctx):
         description=f"Help Menu\nAll commands are prefixed with '.'",
     )
 
-    embed.add_field(name=".alertlevel", value="Displays the current RIT COVID-19 alert level", inline=False)
+    # embed.add_field(name=".alertlevel", value="Displays the current RIT COVID-19 alert level", inline=False)
     embed.add_field(name=".help", value="Displays this message", inline=False)
     embed.add_field(name=".stats", value="Displays the latest statistics from RIT's COVID-19 Dashboard", inline=False)
     embed.add_field(name=".botinfo", value="Displays bot information, including version number and uptime.",
@@ -224,49 +235,50 @@ async def help(ctx):
     await ctx.send(embed=embed)
 
 # Checks to see if the alert level changed, will send an alert if it has
-@tasks.loop(seconds=120)
-async def alert_message():
-    # Get the latest alert level
-    alert = get_alert_level()
+# *** UPDATE 8/31/2021: RIT has discontinued COVID Alert Level ***
+# @tasks.loop(seconds=120)
+# async def alert_message():
+#     # Get the latest alert level
+#     alert = get_alert_level()
 
-    # Get the last known alert level
-    last_known_level = get_last_known()
+#     # Get the last known alert level
+#     last_known_level = get_last_known()
 
-    # Result boolean for logger
-    result = bool(False)
+#     # Result boolean for logger
+#     result = bool(False)
 
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+#     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-    if last_known_level != alert[0]:
-        embed = discord.Embed(
-            title="RIT COVID-19 Alert Level Changed",
-            colour=alert[1],
-            timestamp=datetime.now()
-        )
-        embed.add_field(name="New Alert Level", value=alert[0], inline=False)
-        embed.add_field(name="Previous Alert Level", value=last_known_level, inline=False)
+#     if last_known_level != alert[0]:
+#         embed = discord.Embed(
+#             title="RIT COVID-19 Alert Level Changed",
+#             colour=alert[1],
+#             timestamp=datetime.now()
+#         )
+#         embed.add_field(name="New Alert Level", value=alert[0], inline=False)
+#         embed.add_field(name="Previous Alert Level", value=last_known_level, inline=False)
 
-        # Log to console
-        print(f"[{timestamp}] ALERT LEVEL CHANGED! Current Level: {alert[0]}. Previous: {last_known_level}.\n")
+#         # Log to console
+#         print(f"[{timestamp}] ALERT LEVEL CHANGED! Current Level: {alert[0]}. Previous: {last_known_level}.\n")
 
-        # Log to file
-        with open("alerts.log", "a+") as f:
-            f.write(f"[{timestamp}] ALERT LEVEL CHANGED! Current Level: {alert[0]}. Previous: {last_known_level}.\n")
+#         # Log to file
+#         with open("alerts.log", "a+") as f:
+#             f.write(f"[{timestamp}] ALERT LEVEL CHANGED! Current Level: {alert[0]}. Previous: {last_known_level}.\n")
 
-        # Send an alert to all registered Discord channels
-        for channel in CHANNELS:
-            await channel.send(embed=embed)
+#         # Send an alert to all registered Discord channels
+#         for channel in CHANNELS:
+#             await channel.send(embed=embed)
 
-        # Update the last known text file
-        update_last_known()
-    else:
-        print(f"[{timestamp}] No updates at this time.")
+#         # Update the last known text file
+#         update_last_known()
+#     else:
+#         print(f"[{timestamp}] No updates at this time.")
 
-    with open("logger.log", "a+") as f:
-        if result == True:
-            f.write(f"[{timestamp}] Checked for updates. Alert level was updated.\n")
-        else:
-            f.write(f"[{timestamp}] Checked for updates. Alert level was not updated.\n")
+#     with open("logger.log", "a+") as f:
+#         if result == True:
+#             f.write(f"[{timestamp}] Checked for updates. Alert level was updated.\n")
+#         else:
+#             f.write(f"[{timestamp}] Checked for updates. Alert level was not updated.\n")
 
 @tasks.loop(seconds=300)
 async def logger_check():
@@ -308,7 +320,7 @@ async def on_ready():
     with open("logger.log", "a+") as f:
             f.write(f"** Bot initialized at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} **\n")
 
-    alert_message.start()
+    # alert_message.start()
     logger_check.start()
 
 
