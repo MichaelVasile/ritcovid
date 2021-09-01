@@ -321,7 +321,7 @@ async def on_ready():
             f.write(f"** Bot initialized at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} **\n")
 
     # alert_message.start()
-    logger_check.start()
+    # logger_check.start()
 
 
 # Launch client
