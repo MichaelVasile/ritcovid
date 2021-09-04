@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import time
 
 # Bot version number
-VERSION = "2.0.1"
+VERSION = "3.0"
 
 # Load .env
 load_dotenv()
@@ -16,16 +16,12 @@ load_dotenv()
 # Load API Token from .env
 TOKEN = os.getenv("API_TOKEN")
 
+# Set Logger Channel for Debugging in .env
+LOGGER_CHANNEL = os.getenv("LOGGER_CHANNEL")
+
 # Set client parameters1
 client = commands.Bot(command_prefix=".", intents=discord.Intents.all())
 client.remove_command('help')
-
-# Load channel IDs from .env
-ENV_VARS = ["TEST", "DISCO", "RIT", "NATE", "EEEE", "LGBT"]
-KEYS = [int(os.getenv(key)) for key in ENV_VARS]
-
-# Declare channels list for referencing
-CHANNELS = []
 
 # to get uptime
 startTime = time.time()
@@ -58,30 +54,6 @@ def get_historical_data_from_api():
     return data
 
 
-def get_alert_level():
-    # *** UPDATE 8/31/2021: RIT has discontinued the COVID-19 Alert Level ***
-    data = get_data_from_api()
-
-    alert_level = data["alert_level"]
-
-    color = 0x000000
-
-    if "green" in alert_level:
-        alert_level = "Green (Low Risk with Vigilance)"
-        color = 0x60c10c
-    elif "yellow" in alert_level:
-        alert_level = "Yellow (Moderate Risk)"
-        color = 0xf6be00
-    elif "orange" in alert_level:
-        alert_level = "Orange (Moderate to High Risk)"
-        color = 0xf76902
-    elif "Red" in alert_level:
-        alert_level = "Red (High to Severe Risk)"
-        color = 0xda291c
-
-    return alert_level, color
-
-
 def get_statistics():
 
     # Call API for latest statistics
@@ -93,104 +65,35 @@ def get_statistics():
     total_staff = data["total_staff"]
     new_students = data["new_students"]
     new_staff = data["new_staff"]
-    # campus_quarantine = data["quarantine_on_campus"]
-    # offcampus_quarantine = data["quarantine_off_campus"]
-    # campus_isolated = data["isolation_on_campus"]
-    # offcampus_isolated = data["isolation_off_campus"]
-    # tests_administered = data["tests_administered"]
-    # beds_available = data["beds_available"]
-
-    # Get historical data from API
-    # historical_data = get_historical_data_from_api()
-
-    # Get cases since January 25th
-    # for datapoint in historical_data:
-    #     datapoint_date_time = datetime.strptime(str(datapoint["last_updated"]), '%Y-%m-%d %H:%M:%S')
-    #     if datapoint_date_time == datetime(2021, 1, 22, 21, 4, 6):
-    #         student_case_count = data["total_students"] - datapoint["total_students"]
-    #         staff_case_count = data["total_staff"] - datapoint["total_staff"]
-
-
-    # return last_updated, total_students, total_staff, new_students, new_staff, campus_quarantine, offcampus_quarantine, \
-    #         campus_isolated, offcampus_isolated, tests_administered, beds_available, student_case_count, staff_case_count
 
     return last_updated, total_students, total_staff, new_students, new_staff
 
 
-def check_last_known():
-    # Check to see if the file does not exist or is empty.
-    if os.path.exists("last_known.txt") == False or os.path.getsize("last_known.txt") == 0:
-
-        print("last_known.txt does not exist or is empty. Will create it now...")
-
-        with open("last_known.txt", "w+") as f:
-            # Populate the file
-            f.write(get_alert_level()[0])
-
-    else:
-        print("last_known.txt has valid data.")
-
-
-def get_last_known():
-    last_known = str()
-    # Open the file for reading
-    with open("last_known.txt", "r") as f:
-        # Read first line into the file
-        last_known = f.readline()
-
-    # Return the last known alert level as a string
-    return last_known
-
-
-def update_last_known():
-    # Open text file containing the last known alert level for editing
-    with open("last_known.txt", "w+") as f:
-        # Write the new alert level to the file
-        f.write(get_alert_level()[0])
-
-
 @client.command(pass_context=True)
 async def stats(ctx):
-    # alert_level = get_alert_level()
     statistics = get_statistics()
 
     embed = discord.Embed(
         title="Latest RIT COVID-19 Statistics",
         description=(f"Current statistics as of: {statistics[0]}\n[Source](https://ritcoviddashboard.com)"),
-        colour=0x3928d4,
+        colour=0xF6BE00,
         timestamp=datetime.now()
     )
 
-    # embed.add_field(name="RIT COVID-19 Alert Level", value=alert_level[0], inline=False)
     embed.add_field(name="New Cases from Past 14 Days", value=(f"{statistics[3]} students, {statistics[4]} employees"), inline=False)
-    # embed.add_field(name="Total Cases Since January 25", value=(f"{statistics[11]} students, {statistics[12]} employees"), inline=False)
     embed.add_field(name="All Confirmed Cases",
                     value=(f"{statistics[1]} students, {statistics[2]} employees"), inline=False)
-    # embed.add_field(name="Students Quarantined", value=(f"{statistics[5]} on campus, {statistics[6]} off campus ({str(int(statistics[5]) + int(statistics[6]))} total)"), inline=False)
-    # embed.add_field(name="Students Isolated", value=(f"{statistics[7]} on campus, {statistics[8]} off campus ({str(int(statistics[7]) + int(statistics[8]))} total)"),
-    #                 inline=False)
-    # embed.add_field(name="Tests Administered (to date)", value=(f"{statistics[9]:,}"), inline=False)
-    # embed.add_field(name="Beds Available", value=(f"{statistics[10]}% available"), inline=False)
 
     await ctx.send(embed=embed)
 
 
 @client.command(pass_context=True)
 async def alertlevel(ctx):
-    # alert_level = get_alert_level()
-
-    # embed = discord.Embed(
-    #     title="Current RIT COVID-19 Alert Level",
-    #     description=alert_level[0],
-    #     colour=alert_level[1],
-    #     timestamp=datetime.now()
-    # )
 
     embed = discord.Embed(
         title="RIT COVID-19 Alert Level",
         description='RIT has discontinued the COVID-19 Alert Level.',
         colour=0xd42828,
-        # timestamp=datetime.now()
     )
 
     await ctx.send(embed=embed)
@@ -214,7 +117,6 @@ async def botinfo(ctx):
     )
 
     embed.add_field(name="Uptime", value=f"{get_uptime()}")
-    embed.add_field(name="Active Alert Channels", value=f"{len(CHANNELS)}")
 
     await ctx.send(embed=embed)
 
@@ -223,10 +125,9 @@ async def botinfo(ctx):
 async def help(ctx):
     embed = discord.Embed(
         title="RIT COVID-19 Tracking Bot",
-        description=f"Help Menu\nAll commands are prefixed with '.'",
+        description=f"Help Menu\nAll commands are prefixed with '.'\nNOTE: RIT has discontinued the Alert Level system, so the bot's Alert functionality has been discontinued.",
     )
 
-    # embed.add_field(name=".alertlevel", value="Displays the current RIT COVID-19 alert level", inline=False)
     embed.add_field(name=".help", value="Displays this message", inline=False)
     embed.add_field(name=".stats", value="Displays the latest statistics from RIT's COVID-19 Dashboard", inline=False)
     embed.add_field(name=".botinfo", value="Displays bot information, including version number and uptime.",
@@ -234,51 +135,6 @@ async def help(ctx):
 
     await ctx.send(embed=embed)
 
-# Checks to see if the alert level changed, will send an alert if it has
-# *** UPDATE 8/31/2021: RIT has discontinued COVID Alert Level ***
-# @tasks.loop(seconds=120)
-# async def alert_message():
-#     # Get the latest alert level
-#     alert = get_alert_level()
-
-#     # Get the last known alert level
-#     last_known_level = get_last_known()
-
-#     # Result boolean for logger
-#     result = bool(False)
-
-#     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-#     if last_known_level != alert[0]:
-#         embed = discord.Embed(
-#             title="RIT COVID-19 Alert Level Changed",
-#             colour=alert[1],
-#             timestamp=datetime.now()
-#         )
-#         embed.add_field(name="New Alert Level", value=alert[0], inline=False)
-#         embed.add_field(name="Previous Alert Level", value=last_known_level, inline=False)
-
-#         # Log to console
-#         print(f"[{timestamp}] ALERT LEVEL CHANGED! Current Level: {alert[0]}. Previous: {last_known_level}.\n")
-
-#         # Log to file
-#         with open("alerts.log", "a+") as f:
-#             f.write(f"[{timestamp}] ALERT LEVEL CHANGED! Current Level: {alert[0]}. Previous: {last_known_level}.\n")
-
-#         # Send an alert to all registered Discord channels
-#         for channel in CHANNELS:
-#             await channel.send(embed=embed)
-
-#         # Update the last known text file
-#         update_last_known()
-#     else:
-#         print(f"[{timestamp}] No updates at this time.")
-
-#     with open("logger.log", "a+") as f:
-#         if result == True:
-#             f.write(f"[{timestamp}] Checked for updates. Alert level was updated.\n")
-#         else:
-#             f.write(f"[{timestamp}] Checked for updates. Alert level was not updated.\n")
 
 @tasks.loop(seconds=300)
 async def logger_check():
@@ -290,26 +146,15 @@ async def logger_check():
         embed = discord.Embed(
             title="Logger error",
             description=f"No logger output since {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(mod_time))}",
-            colour=0xffee70,
+            colour=0x009CBD,
         )
 
         # Send to the test server's logger channel
-        await CHANNELS[0].send(embed=embed)
+        await LOGGER_CHANNEL.send(embed=embed)
 
 @client.event
 async def on_ready():
     print("Starting bot...")
-
-    # Load channels into the bot from the KEYS list
-    for key in KEYS:
-        CHANNELS.append(client.get_channel(key))
-
-    # Send load message for verbosity
-    print(f"Loaded {len(CHANNELS)} channels.")
-
-    # Verify that the last known text file is present and not empty
-    # Create one if it doesn't exist
-    check_last_known()
 
     # Set status
     await client.change_presence(status=discord.Status.online, activity=discord.Game("RIT COVID Stats | .stats"))
@@ -320,7 +165,6 @@ async def on_ready():
     with open("logger.log", "a+") as f:
             f.write(f"** Bot initialized at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} **\n")
 
-    # alert_message.start()
     # logger_check.start()
 
 
