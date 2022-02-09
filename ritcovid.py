@@ -1,14 +1,14 @@
 from dotenv import load_dotenv
 import os
-import urllib.request
-import json
+import requests
 import discord
 from discord.ext import commands, tasks
 from datetime import datetime, timedelta
 import time
+import logging
 
 # Bot version number
-VERSION = "3.0"
+VERSION = "3.1"
 
 # Load .env
 load_dotenv()
@@ -26,31 +26,31 @@ client.remove_command('help')
 # to get uptime
 startTime = time.time()
 
+# Configure logging
+logger = logging.getLogger('discord')
+logger.setLevel(logging.DEBUG)
+handler = logging.FileHandler(filename='logger.log', encoding='utf-8', mode='a+')
+handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(name)s: %(message)s'))
+logger.addHandler(handler)
+
+
 # Startup message
 print(f"RIT COVID-19 Tracking Bot v{VERSION} by Michael Vasile\n")
 
 
 def get_data_from_api():
     url = "https://ritcoviddashboard.com/api/v0/latest"
-    user_agent = 'covidbot'
-    headers={'User-Agent':user_agent,} 
-
-    request = urllib.request.Request(url,None,headers)
-    response = urllib.request.urlopen(request)
-    data = json.loads(response.read())
-
+    response = requests.get(url)
+    data = response.json()
+    
     return data
 
 
 def get_historical_data_from_api():
     url = "https://ritcoviddashboard.com/api/v0/history"
-    user_agent = 'covidbot'
-    headers = {'User-Agent': user_agent, }
-
-    request = urllib.request.Request(url, None, headers)
-    response = urllib.request.urlopen(request)
-    data = json.loads(response.read())
-
+    response = requests.get(url)
+    data = response.json()
+    
     return data
 
 
@@ -69,9 +69,25 @@ def get_statistics():
     return last_updated, total_students, total_staff, new_students, new_staff
 
 
+def get_difference():
+
+    # Call API for latest and historical statistics
+    latest = get_data_from_api()
+    historical = get_historical_data_from_api()
+    previous_day = historical[-2]
+
+    new_students = latest["new_students"] - previous_day["new_students"]
+    new_staff = latest["new_staff"] - previous_day["new_staff"]
+    total_students = latest["total_students"] - previous_day["total_students"]
+    total_staff = latest["total_staff"] - previous_day["total_staff"]
+
+    return new_students, new_staff, total_students, total_staff
+
+
 @client.command(pass_context=True)
 async def stats(ctx):
     statistics = get_statistics()
+    difference = get_difference()
 
     embed = discord.Embed(
         title="Latest RIT COVID-19 Statistics",
@@ -80,9 +96,9 @@ async def stats(ctx):
         timestamp=datetime.now()
     )
 
-    embed.add_field(name="New Cases from Past 14 Days", value=(f"{statistics[3]} students, {statistics[4]} employees"), inline=False)
+    embed.add_field(name="New Cases from Past 14 Days", value=(f"{statistics[3]} students ({difference[0]:+g}), {statistics[4]} employees ({difference[1]:+g})"), inline=False)
     embed.add_field(name="All Confirmed Cases",
-                    value=(f"{statistics[1]} students, {statistics[2]} employees"), inline=False)
+                    value=(f"{statistics[1]} students ({difference[2]:+g}), {statistics[2]} employees ({difference[3]:+g})"), inline=False)
 
     await ctx.send(embed=embed)
 
@@ -136,22 +152,6 @@ async def help(ctx):
     await ctx.send(embed=embed)
 
 
-@tasks.loop(seconds=300)
-async def logger_check():
-    # Get the last modified time of the file
-    mod_time = os.path.getmtime("logger.log")
-    file_age = time.time() - os.path.getmtime("logger.log")
-
-    if file_age > 120:
-        embed = discord.Embed(
-            title="Logger error",
-            description=f"No logger output since {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(mod_time))}",
-            colour=0x009CBD,
-        )
-
-        # Send to the test server's logger channel
-        await LOGGER_CHANNEL.send(embed=embed)
-
 @client.event
 async def on_ready():
     print("Starting bot...")
@@ -164,8 +164,6 @@ async def on_ready():
 
     with open("logger.log", "a+") as f:
             f.write(f"** Bot initialized at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} **\n")
-
-    # logger_check.start()
 
 
 # Launch client
