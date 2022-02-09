@@ -1,14 +1,13 @@
 from dotenv import load_dotenv
 import os
-import urllib.request
-import json
+import requests
 import discord
 from discord.ext import commands, tasks
 from datetime import datetime, timedelta
 import time
 
 # Bot version number
-VERSION = "3.0"
+VERSION = "3.1"
 
 # Load .env
 load_dotenv()
@@ -32,25 +31,17 @@ print(f"RIT COVID-19 Tracking Bot v{VERSION} by Michael Vasile\n")
 
 def get_data_from_api():
     url = "https://ritcoviddashboard.com/api/v0/latest"
-    user_agent = 'covidbot'
-    headers={'User-Agent':user_agent,} 
-
-    request = urllib.request.Request(url,None,headers)
-    response = urllib.request.urlopen(request)
-    data = json.loads(response.read())
-
+    response = requests.get(url)
+    data = response.json()
+    
     return data
 
 
 def get_historical_data_from_api():
     url = "https://ritcoviddashboard.com/api/v0/history"
-    user_agent = 'covidbot'
-    headers = {'User-Agent': user_agent, }
-
-    request = urllib.request.Request(url, None, headers)
-    response = urllib.request.urlopen(request)
-    data = json.loads(response.read())
-
+    response = requests.get(url)
+    data = response.json()
+    
     return data
 
 
@@ -69,9 +60,25 @@ def get_statistics():
     return last_updated, total_students, total_staff, new_students, new_staff
 
 
+def get_difference():
+
+    # Call API for latest and historical statistics
+    latest = get_data_from_api()
+    historical = get_historical_data_from_api()
+    previous_day = historical[-2]
+
+    new_students = latest["new_students"] - previous_day["new_students"]
+    new_staff = latest["new_staff"] - previous_day["new_staff"]
+    total_students = latest["total_students"] - previous_day["total_students"]
+    total_staff = latest["total_staff"] - previous_day["total_staff"]
+
+    return new_students, new_staff, total_students, total_staff
+
+
 @client.command(pass_context=True)
 async def stats(ctx):
     statistics = get_statistics()
+    difference = get_difference()
 
     embed = discord.Embed(
         title="Latest RIT COVID-19 Statistics",
@@ -80,9 +87,9 @@ async def stats(ctx):
         timestamp=datetime.now()
     )
 
-    embed.add_field(name="New Cases from Past 14 Days", value=(f"{statistics[3]} students, {statistics[4]} employees"), inline=False)
+    embed.add_field(name="New Cases from Past 14 Days", value=(f"{statistics[3]} students ({difference[0]:+g}), {statistics[4]} employees ({difference[1]:+g})"), inline=False)
     embed.add_field(name="All Confirmed Cases",
-                    value=(f"{statistics[1]} students, {statistics[2]} employees"), inline=False)
+                    value=(f"{statistics[1]} students ({difference[2]:+g}), {statistics[2]} employees ({difference[3]:+g})"), inline=False)
 
     await ctx.send(embed=embed)
 
