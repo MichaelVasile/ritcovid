@@ -5,6 +5,7 @@ import discord
 from discord.ext import commands, tasks
 from datetime import datetime, timedelta
 import time
+import logging
 
 # Bot version number
 VERSION = "3.1"
@@ -24,6 +25,14 @@ client.remove_command('help')
 
 # to get uptime
 startTime = time.time()
+
+# Configure logging
+logger = logging.getLogger('discord')
+logger.setLevel(logging.DEBUG)
+handler = logging.FileHandler(filename='logger.log', encoding='utf-8', mode='a+')
+handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(name)s: %(message)s'))
+logger.addHandler(handler)
+
 
 # Startup message
 print(f"RIT COVID-19 Tracking Bot v{VERSION} by Michael Vasile\n")
@@ -143,22 +152,6 @@ async def help(ctx):
     await ctx.send(embed=embed)
 
 
-@tasks.loop(seconds=300)
-async def logger_check():
-    # Get the last modified time of the file
-    mod_time = os.path.getmtime("logger.log")
-    file_age = time.time() - os.path.getmtime("logger.log")
-
-    if file_age > 120:
-        embed = discord.Embed(
-            title="Logger error",
-            description=f"No logger output since {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(mod_time))}",
-            colour=0x009CBD,
-        )
-
-        # Send to the test server's logger channel
-        await LOGGER_CHANNEL.send(embed=embed)
-
 @client.event
 async def on_ready():
     print("Starting bot...")
@@ -171,8 +164,6 @@ async def on_ready():
 
     with open("logger.log", "a+") as f:
             f.write(f"** Bot initialized at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} **\n")
-
-    # logger_check.start()
 
 
 # Launch client
